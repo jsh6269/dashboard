@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Docker 학습용 프런트</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+  </head>
+  <body>
+    <h1>Dashboard</h1>
+    <p id="intro">
+      항목을 추가하고 검색해 보세요. <br />
+      각 항목에는 요청 시각이 자동 저장됩니다.
+    </p>
+
+    <div id="add-item" class="control-group">
+      <input id="title" placeholder="제목" />
+      <input id="desc" placeholder="설명" />
+      <input type="file" id="image" />
+      <button onclick="addItem()">아이템 추가</button>
+    </div>
+
+    <h3 class="search-title">검색</h3>
+    <div class="control-group">
+      <input id="query" placeholder="검색어" />
+      <button onclick="searchItems()">검색</button>
+    </div>
+
+    <h3 class="result-title">결과</h3>
+    <div id="result">
+      <p style="color: #888">검색 결과가 여기에 표시됩니다.</p>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>

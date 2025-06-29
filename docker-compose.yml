@@ -1,0 +1,56 @@
+version: "3.9"
+
+services:
+  api:
+    build: .
+    container_name: dashboard_api_service
+    ports:
+      - "8000:8000" # FastAPI 서비스
+    depends_on:
+      - db
+      - es
+    environment:
+      - DB_HOST=db
+      - DB_USER=root
+      - DB_PASSWORD=password
+      - DB_NAME=dashboard_db
+      - ES_HOST=es
+      - ES_PORT=9200
+      - TZ=Asia/Seoul
+
+  db:
+    image: mysql:8.0
+    container_name: dashboard_mysql_service
+    restart: always
+    ports:
+      - "3306:3306" # 외부에서도 접근 가능하도록 노출 (선택)
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: dashboard_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.9.0
+    container_name: elastic_service
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+    ports:
+      - "9200:9200" # Elasticsearch REST API
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+
+  frontend:
+    image: nginx:alpine
+    container_name: frontend_service
+    ports:
+      - "3000:80" # 정적 프런트
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
+  es_data:

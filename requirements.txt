@@ -1,0 +1,7 @@
+fastapi==0.109.0
+uvicorn[standard]==0.23.2
+SQLAlchemy==1.4.50
+pymysql==1.1.0
+elasticsearch==8.9.0
+python-multipart==0.0.6
+cryptography==41.0.4 

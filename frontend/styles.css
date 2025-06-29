@@ -1,0 +1,94 @@
+body {
+  font-family: Arial, sans-serif;
+  max-width: 700px;
+  margin: 32px auto;
+  margin-bottom: 50px;
+  color: #333;
+}
+
+h1 {
+  color: #34495e;
+  margin-top: 0px;
+  margin-bottom: 30px;
+}
+
+#intro {
+  margin-bottom: 32px;
+}
+
+.search-title {
+  margin-top: 40px;
+}
+
+.result-title {
+  margin-top: 44px;
+}
+
+button {
+  padding: 5px 16px;
+  font-size: 0.8rem;
+  border: none;
+  background-color: #2d8cf0;
+  color: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #1a73e8;
+}
+
+input[type="text"],
+input[placeholder] {
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+input[type="file"] {
+  padding: 6px 0;
+}
+
+#add-item {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 12px;
+  margin-left: -5px;
+}
+
+.control-group {
+  margin-bottom: 16px;
+}
+
+.control-group input,
+.control-group button {
+  margin-right: 8px;
+}
+
+.control-group input[type="file"] {
+  display: block;
+  margin: 8px 0 12px 0;
+}
+
+#result {
+  margin-top: 24px;
+  min-height: 150px;
+  border: 1px solid #e1e1e1;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 6px;
+}
+
+.card {
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.card img {
+  max-width: 120px;
+  border-radius: 4px;
+  margin-top: 8px;
+}
