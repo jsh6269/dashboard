@@ -3,7 +3,7 @@ import shutil
 import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
-from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from elasticsearch import Elasticsearch
 from fastapi import Depends, FastAPI, HTTPException, UploadFile
@@ -67,7 +67,13 @@ async def create_item(
     ),
 ):
     payload, image = payload_and_image
-    now_seoul = datetime.now(ZoneInfo("Asia/Seoul")).isoformat()
+    try:
+        tz = ZoneInfo("Asia/Seoul")
+    except ZoneInfoNotFoundError:
+        from datetime import timedelta, timezone
+
+        tz = timezone(timedelta(hours=9))
+    now_seoul = datetime.now(tz).isoformat()
     saved_path = None
 
     # Handle image saving
@@ -101,7 +107,10 @@ async def create_item(
         es.index(index="dashboard_items", id=db_item.id, document=es_doc)
 
         return DashboardItemResponse(
-            id=db_item.id, image_path=saved_path, **payload.dict(), created_at=now_seoul
+            id=db_item.id,
+            image_path=saved_path,
+            **payload.model_dump(),
+            created_at=now_seoul,
         )
 
 

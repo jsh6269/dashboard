@@ -51,3 +51,9 @@ Thumbs.db
 
 # Compiled JavaScript map files
 *.map
+
+# Pytest cache
++.pytest_cache/
+
+# SQLite test database
+test.db 
