@@ -84,11 +84,28 @@ input[type="file"] {
   border-radius: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   padding: 12px;
-  margin-top: 12px;
+  margin: 12px 0;
 }
 
 .card img {
   max-width: 120px;
   border-radius: 4px;
   margin-top: 8px;
+  margin-bottom: 22px;
+}
+
+/* 카드 내부 타이포그래피 간격 */
+.card h4 {
+  margin-top: 4px;
+  margin-bottom: 4px;
+}
+
+.card p {
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.card small {
+  display: block;
+  margin-bottom: 8px;
 }

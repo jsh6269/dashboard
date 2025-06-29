@@ -21,6 +21,11 @@ ENV LANG=ko_KR.UTF-8 \
     LANGUAGE=ko_KR:ko \
     LC_ALL=ko_KR.UTF-8
 
+# wait-for-it.sh 설정
+COPY wait-for-it.sh /wait-for-it.sh
+RUN sed -i 's/\r$//' /wait-for-it.sh && chmod +x /wait-for-it.sh
+RUN chmod +x /wait-for-it.sh
+
 # 작업 디렉터리 설정
 WORKDIR /app
 

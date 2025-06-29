@@ -42,6 +42,15 @@ function searchItems() {
     });
 }
 
+function formatDateTime(isoStr) {
+  const d = new Date(isoStr);
+  if (isNaN(d)) return isoStr;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 function renderResults(items) {
   const container = document.getElementById("result");
   if (!items || items.length === 0) {
@@ -57,8 +66,10 @@ function renderResults(items) {
         <div class="card">
           <h4>${item.title}</h4>
           <p>${item.description || ""}</p>
-          <small style="color:#666;">${item.created_at || ""}</small><br/>
-          ${imgTag}
+          ${imgTag}<br/>
+          <small style="color:#666;">${
+            item.created_at ? formatDateTime(item.created_at) : ""
+          }</small>
         </div>
       `;
     })
