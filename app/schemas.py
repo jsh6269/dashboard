@@ -1,9 +1,12 @@
+from typing import List, Optional
+
 from pydantic import BaseModel
-from typing import Optional, List
+
 
 class DashboardItemCreate(BaseModel):
     title: str
     description: Optional[str] = None
+
 
 class DashboardItemResponse(DashboardItemCreate):
     id: int
@@ -12,5 +15,6 @@ class DashboardItemResponse(DashboardItemCreate):
 
     model_config = dict(from_attributes=True)
 
+
 class SearchResults(BaseModel):
-    results: List[DashboardItemResponse] 
+    results: List[DashboardItemResponse]

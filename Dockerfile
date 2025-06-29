@@ -32,4 +32,4 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY . /app
 
 # 컨테이너 실행 명령
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -1,17 +1,20 @@
 import os
-from fastapi import FastAPI, HTTPException, UploadFile, Depends
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from elasticsearch import Elasticsearch
+import shutil
+import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
+
+from elasticsearch import Elasticsearch
+from fastapi import Depends, FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
-import uuid, shutil
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from .dependencies import parse_dashboard_form
 from .models import Base, DashboardItem
 from .schemas import DashboardItemCreate, DashboardItemResponse, SearchResults
-from .dependencies import parse_dashboard_form
 
 # 환경 변수 읽기
 DB_HOST = os.getenv("DB_HOST", "localhost")
@@ -37,6 +40,7 @@ async def lifespan(app: FastAPI):
     yield
     # (Optional) Shutdown logic
 
+
 app = FastAPI(lifespan=lifespan)
 
 # CORS
@@ -58,7 +62,9 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.post("/items", response_model=DashboardItemResponse)
 async def create_item(
-    payload_and_image: tuple[DashboardItemCreate, UploadFile | None] = Depends(parse_dashboard_form),
+    payload_and_image: tuple[DashboardItemCreate, UploadFile | None] = Depends(
+        parse_dashboard_form
+    ),
 ):
     payload, image = payload_and_image
     now_seoul = datetime.now(ZoneInfo("Asia/Seoul")).isoformat()
@@ -94,7 +100,9 @@ async def create_item(
             es_doc["image_path"] = saved_path
         es.index(index="dashboard_items", id=db_item.id, document=es_doc)
 
-        return DashboardItemResponse(id=db_item.id, image_path=saved_path, **payload.dict(), created_at=now_seoul)
+        return DashboardItemResponse(
+            id=db_item.id, image_path=saved_path, **payload.dict(), created_at=now_seoul
+        )
 
 
 @app.get("/search", response_model=SearchResults)
@@ -118,4 +126,4 @@ async def search_items(q: str):
         src = hit.get("_source", {})
         hits.append(DashboardItemResponse(**src, id=int(hit.get("_id", 0))))
 
-    return SearchResults(results=hits) 
+    return SearchResults(results=hits)
