@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dashboard-api
+  labels:
+    app: dashboard-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: dashboard-api
+  template:
+    metadata:
+      labels:
+        app: dashboard-api
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z mysql 3306; do
+                echo "Waiting for MySQL..."
+                sleep 3
+              done
+        - name: wait-for-elasticsearch
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z elasticsearch 9200; do
+                echo "Waiting for Elasticsearch..."
+                sleep 3
+              done
+      containers:
+        - name: dashboard-api
+          image: dashboard-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DB_HOST
+              value: mysql
+            - name: DB_USER
+              value: root
+            - name: DB_PASSWORD
+              value: password
+            - name: DB_NAME
+              value: dashboard_db
+            - name: ES_HOST
+              value: elasticsearch
+            - name: ES_PORT
+              value: "9200"
+            - name: TZ
+              value: Asia/Seoul
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dashboard-api
+spec:
+  selector:
+    app: dashboard-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
