@@ -29,16 +29,58 @@ DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+es: Elasticsearch | None = None
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events using FastAPI lifespan"""
-    # Startup logic
+    global es
+    es = Elasticsearch([f"http://{ES_HOST}:{ES_PORT}"])
     Base.metadata.create_all(bind=engine)
+
     if not es.indices.exists(index="dashboard_items"):
-        es.indices.create(index="dashboard_items")
+        es.indices.create(
+            index="dashboard_items",
+            body={
+                "settings": {
+                    "analysis": {
+                        "analyzer": {
+                            "korean": {
+                                "type": "custom",
+                                "tokenizer": "nori_tokenizer",
+                                "filter": ["lowercase"]
+                            }
+                        }
+                    }
+                },
+                "mappings": {
+                    "properties": {
+                        "title": {
+                            "type": "text",
+                            "analyzer": "korean",
+                            "search_analyzer": "korean",
+                            "fields": {
+                                "en": {"type": "text", "analyzer": "english"}
+                            },
+                        },
+                        "description": {
+                            "type": "text",
+                            "analyzer": "korean",
+                            "search_analyzer": "korean",
+                            "fields": {
+                                "en": {"type": "text", "analyzer": "english"}
+                            },
+                        },
+                        "image_path": {"type": "keyword"},
+                        "created_at": {"type": "date"},
+                    }
+                },
+            },
+        )
     yield
-    # (Optional) Shutdown logic
+
+    # Shutdown logic
+    es.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -51,9 +93,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Elasticsearch 클라이언트
-es = Elasticsearch([f"http://{ES_HOST}:{ES_PORT}"])
 
 # Serving uploaded images
 os.makedirs("uploads", exist_ok=True)
@@ -123,7 +162,7 @@ async def search_items(q: str):
             query={
                 "multi_match": {
                     "query": q,
-                    "fields": ["title", "description"],
+                    "fields": ["title", "description", "title.en", "description.en"],
                 }
             },
         )

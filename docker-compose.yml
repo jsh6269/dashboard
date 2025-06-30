@@ -62,7 +62,7 @@ services:
       discovery.type: single-node
       xpack.security.enabled: "false"
     ports:
-      - "9200:9200" # Elasticsearch REST API
+      - "9200:9200"
     volumes:
       - es_data:/usr/share/elasticsearch/data
     healthcheck:
@@ -74,6 +74,13 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    command: >
+      bash -c "
+        if [ ! -d plugins/analysis-nori ]; then
+          elasticsearch-plugin install --batch analysis-nori;
+        fi &&
+        elasticsearch
+      "
 
 volumes:
   mysql_data:
