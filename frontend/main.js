@@ -1,3 +1,5 @@
+const baseurl = "http://localhost:8000";
+
 function addItem() {
   const title = document.getElementById("title").value;
   const description = document.getElementById("desc").value;
@@ -9,7 +11,7 @@ function addItem() {
     formData.append("image", fileInput.files[0]);
   }
 
-  fetch("http://localhost:8000/items", {
+  fetch(`${baseurl}/items`, {
     method: "POST",
     body: formData,
   })
@@ -26,7 +28,7 @@ function addItem() {
 
 function searchItems() {
   const q = document.getElementById("query").value;
-  fetch(`http://localhost:8000/search?q=${encodeURIComponent(q)}`)
+  fetch(`${baseurl}/search?q=${encodeURIComponent(q)}`)
     .then((resp) => resp.json())
     .then((data) => {
       if (Array.isArray(data.results)) {
@@ -60,7 +62,7 @@ function renderResults(items) {
   container.innerHTML = items
     .map((item) => {
       const imgTag = item.image_path
-        ? `<img src="http://localhost:8000/${item.image_path}" style="max-width:100px;" />`
+        ? `<img src="${baseurl}/${item.image_path}" style="max-width:100px;" />`
         : "";
       return `
         <div class="card">
