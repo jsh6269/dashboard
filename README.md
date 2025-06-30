@@ -34,6 +34,48 @@ docker compose up -d --no-deps --build api  # db/es/front 컨테이너는 그대
 - http://localhost:9200 – Elasticsearch 노드 정보
 - http://localhost:3000 – 정적 프런트(아이템 추가/검색 UI)
 
+## 로컬 쿠버네티스(Kind) 배포
+
+로컬 환경에서 [Kind(Kubernetes in Docker)](https://kind.sigs.k8s.io/)를 사용하여 전체 서비스를 배포할 수 있습니다.
+
+### 사전 준비
+
+- [Docker](https://docs.docker.com/get-docker/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+- [Kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+
+### 배포 명령어
+
+아래 명령어를 프로젝트 루트 디렉토리에서 순서대로 실행합니다.
+
+```bash
+kind create cluster
+
+# dashboard-api, dashboard-frontend has to be built first
+kind load docker-image dashboard-api:latest
+kind load docker-image dashboard-frontend:latest
+
+docker build -t es-nori:latest -f k8s/es-nori.Dockerfile .
+kind load docker-image es-nori:latest
+
+kubectl apply -f k8s/mysql-deployment.yaml
+kubectl apply -f k8s/elasticsearch-deployment.yaml
+kubectl apply -f k8s/api-deployment-service.yaml
+kubectl apply -f k8s/frontend-deployment-service.yaml
+
+kubectl get pods
+
+kubectl port-forward service/dashboard-api 8000:8000
+kubectl port-forward service/dashboard-frontend 8080:80
+```
+
+### 서비스 확인 (Kind)
+
+포트 포워딩 실행 후, 아래 주소로 서비스에 접근할 수 있습니다.
+
+- `http://localhost:8000/docs` – Dashboard REST API 문서
+- `http://localhost:3000` – 프런트엔드 UI
+
 ## Front / Back 구성
 
 ### Front-end (Nginx 정적 서버)
