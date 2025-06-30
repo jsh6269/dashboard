@@ -7,8 +7,8 @@ from sqlalchemy.orm import sessionmaker
 
 def _prepare_test_app():
     """Create in-memory SQLite engine and monkeypatch app.* for isolated tests."""
-    import app.main as main
-    from app.models import Base  # relative import within package
+    import api.main as main
+    from api.models import Base  # relative import within package
 
     # 1. SQLite in-memory DB
     engine = create_engine(

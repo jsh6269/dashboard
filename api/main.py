@@ -12,9 +12,9 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .dependencies import parse_dashboard_form
-from .models import Base, DashboardItem
-from .schemas import DashboardItemCreate, DashboardItemResponse, SearchResults
+from dependencies import parse_dashboard_form
+from models import Base, DashboardItem
+from schemas import DashboardItemCreate, DashboardItemResponse, SearchResults
 
 # 환경 변수 읽기
 DB_HOST = os.getenv("DB_HOST", "localhost")

@@ -1,11 +1,14 @@
-version: "3.9"
+# docker-compose.yml
+# FastAPI + nginx + MySQL + Elasticsearch
 
 services:
   api:
-    build: .
+    build:
+      context: ./api
+      dockerfile: Dockerfile
     container_name: dashboard_api_service
     ports:
-      - "8000:8000" # FastAPI 서비스
+      - "8000:8000" # FastAPI
     depends_on:
       - db
       - es
@@ -17,11 +20,21 @@ services:
       ES_HOST: es
       ES_PORT: 9200
       TZ: Asia/Seoul
-    # MySQL, Elasticsearch 포트가 열릴 때까지 최대 60초씩 대기 → 준비되면 uvicorn 실행
+    # MySQL, Elasticsearch 포트가 열릴 때까지 최대 240초씩 대기 → 준비되면 uvicorn 실행
     command: >
-      /bin/sh -c "/wait-for-it.sh db:3306 --timeout=60 --strict && \
-      /wait-for-it.sh es:9200 --timeout=60 --strict && \
-      uvicorn app.main:app --host 0.0.0.0 --port 8000"
+      /bin/sh -c "/wait-for-it.sh db:3306 --timeout=240 --strict && \
+      /wait-for-it.sh es:9200 --timeout=240 --strict && \
+      uvicorn main:app --host 0.0.0.0 --port 8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend_service
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
 
   db:
     image: mysql:8.0
@@ -61,16 +74,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
-
-  frontend:
-    image: nginx:alpine
-    container_name: frontend_service
-    ports:
-      - "3000:80"
-    volumes:
-      - ./frontend:/usr/share/nginx/html:ro
-    depends_on:
-      - api
 
 volumes:
   mysql_data:

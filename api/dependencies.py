@@ -2,7 +2,7 @@ from typing import Tuple
 
 from fastapi import File, Form, UploadFile
 
-from .schemas import DashboardItemCreate
+from schemas import DashboardItemCreate
 
 
 def parse_dashboard_form(
