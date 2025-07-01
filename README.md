@@ -5,13 +5,15 @@
 - Python FastAPI
 - MySQL(dashboard_db, 비밀번호 password)
 - Elasticsearch
-- Dockerfile(커스텀 이미지) + 외부 이미지(mysql, elasticsearch)
+- Redis (캐시)
+- Dockerfile(커스텀 이미지) + 외부 이미지(mysql, elasticsearch, redis)
 - Docker Compose
 - Ubuntu 기반 컨테이너
-- 외부에서 접근할 수 있는 3개 포트
+- 외부에서 접근할 수 있는 4개 포트
   - 8000: Dashboard REST API
   - 9200: Elasticsearch REST API
   - 3000: 정적 프런트엔드 (Nginx)
+  - 6379: Redis
 
 ## 사전 준비
 
@@ -60,6 +62,7 @@ kind load docker-image es-nori:latest
 
 kubectl apply -f k8s/mysql-deployment.yaml
 kubectl apply -f k8s/elasticsearch-deployment.yaml
+kubectl apply -f k8s/redis-deployment.yaml
 kubectl apply -f k8s/api-deployment-service.yaml
 kubectl apply -f k8s/frontend-deployment-service.yaml
 
@@ -100,6 +103,7 @@ kubectl port-forward service/dashboard-frontend 8080:80
 - 주요 엔드포인트
   - `POST /items` : multipart/form-data 로 아이템 생성 (이미지 업로드 포함)
   - `GET /search` : Elasticsearch 기반 아이템 검색
+    - Redis 캐시 사용
   - Swagger UI : `http://localhost:8000/docs`
 - 내부 구성
   - MySQL 8.0 (`dashboard_db`, 비밀번호 `password`)
@@ -168,3 +172,35 @@ curl -X POST "http://localhost:8000/items" \
 ```
 
 검색 결과 또는 응답에서 `image_path` 값이 있으면 브라우저에서 `http://localhost:8000/<image_path>` 로 접근하여 이미지를 확인할 수 있습니다.
+
+## Redis 캐싱
+
+이 프로젝트는 검색 속도 향상을 위해 **Redis**를 캐시 계층으로 사용합니다. 주요 구성은 다음과 같습니다.
+
+| 항목       | 값                                                         |
+| ---------- | ---------------------------------------------------------- |
+| 이미지     | `redis:7-alpine`                                           |
+| Max Memory | `64mb` (`--maxmemory 64mb --maxmemory-policy allkeys-lru`) |
+| 기본 TTL   | `15초` (`/search` 엔드포인트 결과)                         |
+
+### Docker Compose
+
+Docker Compose 환경에서는 `docker-compose.yml` 의 `redis` 서비스가 자동으로 기동됩니다. 메모리 제한, 제거 정책 등은 `command` 인수로 지정되어 있습니다.
+
+```yaml
+redis:
+  image: redis:7-alpine
+  command: >
+    redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+  ports:
+    - "6379:6379"
+```
+
+### 캐시 동작
+
+1. 클라이언트가 `GET /search?q=키워드` 호출
+2. FastAPI 가 `search:{q}` 키로 Redis에서 먼저 조회
+3. **HIT** ➜ 직렬화된(orjson) 결과를 반환 (평균 <1 ms)
+4. **MISS** ➜ Elasticsearch 질의 → 결과를 Redis에 `ex=15`(15초)로 저장 후 응답
+
+TTL 이 짧은 이유는 검색 결과 신선도를 높이면서도 Hot 키 재사용 효과를 얻기 위함입니다. 필요에 따라 `api/main.py` 의 `ex` 값을 조정해 주세요.
