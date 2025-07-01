@@ -12,6 +12,7 @@ services:
     depends_on:
       - db
       - es
+      - redis
     environment:
       DB_HOST: db
       DB_USER: root
@@ -19,11 +20,14 @@ services:
       DB_NAME: dashboard_db
       ES_HOST: es
       ES_PORT: 9200
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
       TZ: Asia/Seoul
     # MySQL, Elasticsearch 포트가 열릴 때까지 최대 240초씩 대기 → 준비되면 uvicorn 실행
     command: >
       /bin/sh -c "/wait-for-it.sh db:3306 --timeout=240 --strict && \
       /wait-for-it.sh es:9200 --timeout=240 --strict && \
+      /wait-for-it.sh redis:6379 --timeout=240 --strict && \
       uvicorn main:app --host 0.0.0.0 --port 8000"
 
   frontend:
@@ -39,7 +43,6 @@ services:
   db:
     image: mysql:8.0
     container_name: dashboard_mysql_service
-    restart: always
     ports:
       - "3306:3306" # 외부 접근 노출(선택)
     environment:
@@ -81,6 +84,14 @@ services:
         fi &&
         elasticsearch
       "
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_service
+    command: >
+      redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
 
 volumes:
   mysql_data:
