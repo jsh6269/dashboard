@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 
 
@@ -6,18 +6,17 @@ class Settings(BaseSettings):
     """프로젝트 공통 설정을 환경변수 + .env 로부터 읽어온다."""
 
     # Database
-    db_host: str = Field("localhost", env="DB_HOST")
-    db_user: str = Field("root", env="DB_USER")
-    db_password: str = Field("password", env="DB_PASSWORD")
-    db_name: str = Field("dashboard_db", env="DB_NAME")
+    db_host: str = Field("localhost", validation_alias="DB_HOST")
+    db_user: str = Field("root", validation_alias="DB_USER")
+    db_password: str = Field("password", validation_alias="DB_PASSWORD")
+    db_name: str = Field("dashboard_db", validation_alias="DB_NAME")
 
     # Elasticsearch
-    es_host: str = Field("localhost", env="ES_HOST")
-    es_port: str = Field("9200", env="ES_PORT")
+    es_host: str = Field("localhost", validation_alias="ES_HOST")
+    es_port: str = Field("9200", validation_alias="ES_PORT")
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
+    # Pydantic v2 config
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
     # Convenience properties
     @property

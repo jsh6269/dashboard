@@ -25,4 +25,6 @@ jobs:
           pip install pytest
 
       - name: Run tests
-        run: pytest -q
+        run: |
+          cd api
+          python -m pytest -vv tests/
