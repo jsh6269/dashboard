@@ -5,8 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from elasticsearch import Elasticsearch
-from fastapi import Depends, FastAPI, HTTPException, UploadFile
+from fastapi import Depends, FastAPI, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine
@@ -15,72 +14,24 @@ from sqlalchemy.orm import sessionmaker
 from dependencies import parse_dashboard_form
 from models import Base, DashboardItem
 from schemas import DashboardItemCreate, DashboardItemResponse, SearchResults
+from search_service import SearchService
+from settings import Settings
 
-# 환경 변수 읽기
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_USER = os.getenv("DB_USER", "root")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
-DB_NAME = os.getenv("DB_NAME", "dashboard_db")
-ES_HOST = os.getenv("ES_HOST", "localhost")
-ES_PORT = os.getenv("ES_PORT", "9200")
-
-DATABASE_URL = f"mysql+pymysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}/{DB_NAME}"
+# 설정 불러오기
+settings = Settings()
+DATABASE_URL = settings.database_url
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-es: Elasticsearch | None = None
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events using FastAPI lifespan"""
-    global es
-    es = Elasticsearch([f"http://{ES_HOST}:{ES_PORT}"])
+    app.state.search = SearchService(settings.es_host, settings.es_port)
     Base.metadata.create_all(bind=engine)
 
-    if not es.indices.exists(index="dashboard_items"):
-        es.indices.create(
-            index="dashboard_items",
-            body={
-                "settings": {
-                    "analysis": {
-                        "analyzer": {
-                            "korean": {
-                                "type": "custom",
-                                "tokenizer": "nori_tokenizer",
-                                "filter": ["lowercase"]
-                            }
-                        }
-                    }
-                },
-                "mappings": {
-                    "properties": {
-                        "title": {
-                            "type": "text",
-                            "analyzer": "korean",
-                            "search_analyzer": "korean",
-                            "fields": {
-                                "en": {"type": "text", "analyzer": "english"}
-                            },
-                        },
-                        "description": {
-                            "type": "text",
-                            "analyzer": "korean",
-                            "search_analyzer": "korean",
-                            "fields": {
-                                "en": {"type": "text", "analyzer": "english"}
-                            },
-                        },
-                        "image_path": {"type": "keyword"},
-                        "created_at": {"type": "date"},
-                    }
-                },
-            },
-        )
     yield
-
-    # Shutdown logic
-    es.close()
+    app.state.search.close()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -101,6 +52,7 @@ app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 @app.post("/items", response_model=DashboardItemResponse)
 async def create_item(
+    request: Request,
     payload_and_image: tuple[DashboardItemCreate, UploadFile | None] = Depends(
         parse_dashboard_form
     ),
@@ -112,7 +64,7 @@ async def create_item(
         from datetime import timedelta, timezone
 
         tz = timezone(timedelta(hours=9))
-    now_seoul = datetime.now(tz).isoformat()
+    now_seoul = datetime.now(tz)
     saved_path = None
 
     # Handle image saving
@@ -139,38 +91,31 @@ async def create_item(
         es_doc = {
             "title": payload.title,
             "description": payload.description,
-            "created_at": now_seoul,
+            "created_at": now_seoul.isoformat(),
         }
         if saved_path:
             es_doc["image_path"] = saved_path
-        es.index(index="dashboard_items", id=db_item.id, document=es_doc)
+        # Elasticsearch 색인
+        request.app.state.search.index_item(db_item.id, es_doc)
 
         return DashboardItemResponse(
             id=db_item.id,
             image_path=saved_path,
             **payload.model_dump(),
-            created_at=now_seoul,
+            created_at=db_item.created_at,
         )
 
 
 @app.get("/search", response_model=SearchResults)
-async def search_items(q: str):
+async def search_items(q: str, request: Request):
     """Elasticsearch에서 아이템 검색"""
     try:
-        result = es.search(
-            index="dashboard_items",
-            query={
-                "multi_match": {
-                    "query": q,
-                    "fields": ["title", "description", "title.en", "description.en"],
-                }
-            },
-        )
+        result = request.app.state.search.search_items(q)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
     hits = []
-    for hit in result.get("hits", {}).get("hits", []):
+    for hit in result:
         src = hit.get("_source", {})
         hits.append(DashboardItemResponse(**src, id=int(hit.get("_id", 0))))
 

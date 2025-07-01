@@ -1,4 +1,5 @@
 from typing import List, Optional
+from datetime import datetime
 
 from pydantic import BaseModel
 
@@ -10,7 +11,7 @@ class DashboardItemCreate(BaseModel):
 
 class DashboardItemResponse(DashboardItemCreate):
     id: int
-    created_at: str
+    created_at: datetime
     image_path: Optional[str] = None
 
     model_config = dict(from_attributes=True)
