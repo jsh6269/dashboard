@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 
@@ -7,10 +7,18 @@ def prepare_test_app():
     import main
     from models import Base
 
-    # In-memory SQLite engine
-    engine = create_engine("sqlite:///./test.db", connect_args={"check_same_thread": False})
-    TestingSession = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-    Base.metadata.create_all(engine)
+    # In-memory SQLite async engine
+    engine = create_async_engine("sqlite+aiosqlite:///./test.db")
+    TestingSession = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
+    # Create tables
+    import asyncio
+
+    async def _create_schema():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+    asyncio.get_event_loop().run_until_complete(_create_schema())
 
     # Dummy search service replacing Elasticsearch
     class DummySearch:
@@ -25,14 +33,15 @@ def prepare_test_app():
             return [
                 {"_id": _id, "_source": doc}
                 for _id, doc in self.store.items()
-                if q in doc["title"].lower() or q in (doc.get("description") or "").lower()
+                if q in doc["title"].lower()
+                or q in (doc.get("description") or "").lower()
             ]
 
     # Monkeypatch DB and search
     main.engine = engine
-    main.SessionLocal = TestingSession
+    main.AsyncSessionLocal = TestingSession
 
     app = main.app
     app.state.search = DummySearch()
 
-    return app 
+    return app

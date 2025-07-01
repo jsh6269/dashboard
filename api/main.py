@@ -4,28 +4,28 @@ import uuid
 from contextlib import asynccontextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 import orjson
 import redis.asyncio as redis
+from dependencies import parse_dashboard_form
+from fastapi import Depends, FastAPI, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
-
-from fastapi import Depends, FastAPI, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from dependencies import parse_dashboard_form
 from models import Base, DashboardItem
 from schemas import DashboardItemCreate, DashboardItemResponse, SearchResults
 from search_service import SearchService
 from settings import Settings
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
 # 설정 불러오기
 settings = Settings()
-DATABASE_URL = settings.database_url
+DATABASE_URL = settings.async_database_url
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+engine = create_async_engine(DATABASE_URL, pool_pre_ping=True)
+AsyncSessionLocal = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,7 +51,9 @@ async def lifespan(app: FastAPI):
         # If Redis is not available, proceed without caching
         app.state.redis = None
 
-    Base.metadata.create_all(bind=engine)
+    # Create tables (run sync via async engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     yield
     # Cleanup resources
@@ -106,7 +108,7 @@ async def create_item(
             shutil.copyfileobj(image.file, buffer)
         image.file.close()
 
-    with SessionLocal() as session:
+    async with AsyncSessionLocal() as session:
         db_item = DashboardItem(
             title=payload.title,
             description=payload.description,
@@ -114,8 +116,8 @@ async def create_item(
             created_at=now_seoul,
         )
         session.add(db_item)
-        session.commit()
-        session.refresh(db_item)
+        await session.commit()
+        await session.refresh(db_item)
 
         es_doc = {
             "title": payload.title,
@@ -170,10 +172,10 @@ async def search_items(q: str, request: Request):
     # Store in Redis cache for 15 seconds
     if redis_client is not None:
         try:
-            await redis_client.setex(
+            await redis_client.set(
                 cache_key,
-                15,  # seconds
                 orjson.dumps([h.model_dump(mode="python") for h in hits]),
+                ex=15,  # seconds
             )
         except Exception:
             pass

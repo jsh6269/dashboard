@@ -1,5 +1,5 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -25,4 +25,9 @@ class Settings(BaseSettings):
     # Convenience properties
     @property
     def database_url(self) -> str:
-        return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}/{self.db_name}" 
+        return f"mysql+pymysql://{self.db_user}:{self.db_password}@{self.db_host}/{self.db_name}"
+
+    @property
+    def async_database_url(self) -> str:
+        """Return async SQLAlchemy URL (using asyncmy driver)."""
+        return f"mysql+aiomysql://{self.db_user}:{self.db_password}@{self.db_host}/{self.db_name}"
