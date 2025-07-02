@@ -29,6 +29,8 @@ services:
       /wait-for-it.sh es:9200 --timeout=240 --strict && \
       /wait-for-it.sh redis:6379 --timeout=240 --strict && \
       uvicorn main:app --host 0.0.0.0 --port 8000"
+    volumes:
+      - ./api/uploads:/app/uploads
 
   frontend:
     build:
@@ -96,3 +98,4 @@ services:
 volumes:
   mysql_data:
   es_data:
+  # uploads is bind-mounted from host path, no named volume needed
