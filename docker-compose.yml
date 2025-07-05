@@ -50,8 +50,10 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: password
       MYSQL_DATABASE: dashboard_db
+      MYSQL_ROOT_HOST: "%" # 모든 호스트에서 접근 허용
     volumes:
       - mysql_data:/var/lib/mysql
+      - ./api/init.sql:/docker-entrypoint-initdb.d/init.sql # 초기화 스크립트
     # MySQL이 실제로 연결 가능한 상태인지 확인
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-ppassword"]
