@@ -1,7 +1,6 @@
 from typing import Tuple
 
 from fastapi import File, Form, UploadFile
-
 from schemas import DashboardItemCreate
 
 

@@ -37,16 +37,12 @@ class SearchService:
                         "title": {
                             "type": "text",
                             "analyzer": "korean",
-                            "fields": {
-                                "en": {"type": "text", "analyzer": "english"}
-                            },
+                            "fields": {"en": {"type": "text", "analyzer": "english"}},
                         },
                         "description": {
                             "type": "text",
                             "analyzer": "korean",
-                            "fields": {
-                                "en": {"type": "text", "analyzer": "english"}
-                            },
+                            "fields": {"en": {"type": "text", "analyzer": "english"}},
                         },
                         "image_path": {"type": "keyword"},
                         "created_at": {"type": "date"},
@@ -79,4 +75,4 @@ class SearchService:
         return result.get("hits", {}).get("hits", [])
 
     def close(self) -> None:
-        self.es.close() 
+        self.es.close()
