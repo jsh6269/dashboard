@@ -1,11 +1,11 @@
-# Dashboard 통합 프로젝트
+# Dashboard with Docker
 
-이 프로젝트는 다음 기술 스택을 한 번에 학습할 수 있도록 구성되었습니다.
+이 프로젝트는 다음 기술 스택을 한 번에 체험할 수 있도록 구성되었습니다.
 
 - Python FastAPI
-- MySQL(dashboard_db, 비밀번호 password)
-- Elasticsearch
-- Redis (캐시)
+- MySQL 8.0 (DB: `dashboard_db`, 비밀번호 `password`)
+- Elasticsearch 8.9
+- Redis 7 (캐싱)
 - Dockerfile(커스텀 이미지) + 외부 이미지(mysql, elasticsearch, redis)
 - Docker Compose
 - Ubuntu 기반 컨테이너
@@ -15,6 +15,31 @@
   - 3000: 정적 프런트엔드 (Nginx)
   - 6379: Redis
 
+## 구조
+
+```
+dashboard/
+├── api/                  # 백엔드 서비스
+│   ├── main.py          # FastAPI 애플리케이션
+│   ├── models.py        # 데이터베이스 모델
+│   ├── schemas.py       # API 스키마
+│   ├── search_service.py # 검색 서비스
+│   ├── tests/           # 테스트 코드
+│   └── uploads/         # 파일 업로드 저장소
+├── frontend/            # 프론트엔드 서비스
+│   ├── index.html
+│   ├── main.js
+│   └── styles.css
+├── k8s/                 # Kubernetes 설정
+│   ├── api-deployment-service.yaml      # API 서버 배포 설정
+│   ├── elasticsearch-deployment.yaml     # Elasticsearch 배포 설정
+│   ├── es-nori.Dockerfile               # Elasticsearch Nori 분석기 이미지
+│   ├── frontend-deployment-service.yaml  # 프론트엔드 배포 설정
+│   ├── mysql-deployment.yaml            # MySQL 배포 설정
+│   └── redis-deployment.yaml            # Redis 배포 설정
+└── docker-compose.yml   # 로컬 개발 환경 설정
+```
+
 ## 사전 준비
 
 - Docker ≥ 20.10
@@ -23,14 +48,14 @@
 ## 실행 방법
 
 ```bash
-# 프로젝트 루트(example)에서
+# 프로젝트 루트(dashboard)에서
 docker compose up --build -d        # 최초 실행(전체 빌드)
 
 # 코드 수정 후 API 서비스만 빠르게 재배포하고 싶을 때
-docker compose up -d --no-deps --build api  # db/es/front 컨테이너는 그대로 유지
+docker compose up -d --no-deps --build api
 ```
 
-서비스 확인:
+서비스 확인 (Docker Compose):
 
 - http://localhost:8000/docs – Dashboard REST API 문서
 - http://localhost:9200 – Elasticsearch 노드 정보
@@ -74,10 +99,10 @@ kubectl port-forward service/dashboard-frontend 8080:80
 
 ### 서비스 확인 (Kind)
 
-포트 포워딩 실행 후, 아래 주소로 서비스에 접근할 수 있습니다.
+포트 포워딩 명령을 수행한 뒤에는 다음 주소로 접근합니다.
 
 - `http://localhost:8000/docs` – Dashboard REST API 문서
-- `http://localhost:3000` – 프런트엔드 UI
+- `http://localhost:8080` – 프런트엔드 UI (포트포워딩에서 8080 → 80)
 
 ## Front / Back 구성
 
@@ -87,7 +112,7 @@ kubectl port-forward service/dashboard-frontend 8080:80
 - 이미지: `nginx:alpine`
 - 포트 매핑: `3000:80`
   - `3000` (호스트) → `80` (컨테이너)  
-    즉 브라우저에서 `http://localhost:3000` 요청 시 컨테이너 내부 Nginx(80번 포트)에 전달되어 정적 페이지를 반환
+    즉, 브라우저에서 `http://localhost:3000` 요청 시 컨테이너 내부 Nginx(80번 포트)에 전달되어 정적 페이지를 반환
 - 주요 파일
   - `index.html` : 기본 페이지 (폼 + 결과 렌더링)
   - `styles.css` : UI 스타일
@@ -99,19 +124,20 @@ kubectl port-forward service/dashboard-frontend 8080:80
 
 ### Back-end (FastAPI)
 
-- 경로: `app/`
+- 경로: `api/`
 - 주요 엔드포인트
   - `POST /items` : multipart/form-data 로 아이템 생성 (이미지 업로드 포함)
   - `GET /search` : Elasticsearch 기반 아이템 검색
-    - Redis 캐시 사용
+    - Redis 캐시 사용 (ex=15s)
   - Swagger UI : `http://localhost:8000/docs`
 - 내부 구성
   - MySQL 8.0 (`dashboard_db`, 비밀번호 `password`)
   - Elasticsearch 8.x (`dashboard_items` 인덱스)
+  - Redis 7 (`캐시`)
 
-## 사용 예시 (CLI)
+### 사용 예시 (CLI)
 
-1. **이미지 없이 아이템 추가**
+<p>1. 이미지 없이 아이템 추가</p>
 
 ```bash
 curl -X POST "http://localhost:8000/items" \
@@ -119,7 +145,7 @@ curl -X POST "http://localhost:8000/items" \
      -F "description=No image"
 ```
 
-2. **이미지 포함 아이템 추가**
+<p>2. 이미지 포함 아이템 추가</p>
 
 ```bash
 curl -X POST "http://localhost:8000/items" \
@@ -128,50 +154,20 @@ curl -X POST "http://localhost:8000/items" \
      -F "image=@/absolute/path/to/file.png"
 ```
 
-3. **검색**
+<p>3. 검색</p>
 
 ```bash
 curl "http://localhost:8000/search?q=Hello"
 ```
 
-브라우저에서 http://localhost:3000 을 열어 UI 로도 동일 기능을 테스트할 수 있습니다.
+브라우저에서 http://localhost:3000 을 열어 dashboard ui로 기능을 테스트할 수 있습니다.
 
 ## 데이터 보존
 
 - `mysql_data` 볼륨: MySQL 데이터
 - `es_data` 볼륨: Elasticsearch 데이터
-
-## 구조
-
-```
-example/
-├── app/
-│   ├── main.py            # FastAPI 라우터
-│   ├── models.py          # SQLAlchemy ORM
-│   ├── schemas.py         # Pydantic 스키마
-│   └── dependencies.py    # FastAPI Depends 함수
-├── frontend/
-│   ├── index.html
-│   ├── styles.css
-│   ├── main.js
-│   └── favicon.ico
-├── Dockerfile             # Ubuntu 기반 커스텀 Python 이미지
-├── docker-compose.yml
-├── requirements.txt
-└── README.md
-```
-
-- - 아이템 추가 시 선택적으로 이미지 업로드 가능(프런트 파일 입력 또는 curl -F)
-    ...
-
-```bash
-curl -X POST "http://localhost:8000/items" \
-     -F "title=Hello" \
-     -F "description=With image" \
-     -F "image=@path/to/file.png"
-```
-
-검색 결과 또는 응답에서 `image_path` 값이 있으면 브라우저에서 `http://localhost:8000/<image_path>` 로 접근하여 이미지를 확인할 수 있습니다.
+- `uploads` : 호스트 디렉터리에 이미지 파일을 저장
+  - `./uploads` 또는 `/data/dashboard-uploads`로 마운트
 
 ## Redis 캐싱
 
@@ -183,9 +179,7 @@ curl -X POST "http://localhost:8000/items" \
 | Max Memory | `64mb` (`--maxmemory 64mb --maxmemory-policy allkeys-lru`) |
 | 기본 TTL   | `15초` (`/search` 엔드포인트 결과)                         |
 
-### Docker Compose
-
-Docker Compose 환경에서는 `docker-compose.yml` 의 `redis` 서비스가 자동으로 기동됩니다. 메모리 제한, 제거 정책 등은 `command` 인수로 지정되어 있습니다.
+Docker Compose 환경에서는 `docker-compose.yml` 의 `redis` 서비스가 자동으로 돌아갑니다. 메모리 제한, 제거 정책 등은 `command` 인수로 지정되어 있습니다.
 
 ```yaml
 redis:
@@ -203,4 +197,15 @@ redis:
 3. **HIT** ➜ 직렬화된(orjson) 결과를 반환 (평균 <1 ms)
 4. **MISS** ➜ Elasticsearch 질의 → 결과를 Redis에 `ex=15`(15초)로 저장 후 응답
 
-TTL 이 짧은 이유는 검색 결과 신선도를 높이면서도 Hot 키 재사용 효과를 얻기 위함입니다. 필요에 따라 `api/main.py` 의 `ex` 값을 조정해 주세요.
+## 테스트 실행
+
+pytest 기반 단위 테스트가 포함되어 있습니다.
+
+```bash
+pip install -r requirements.txt
+cd api && python -m pytest -vv tests/
+```
+
+## License
+
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for details.
