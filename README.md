@@ -1,5 +1,7 @@
 # Dashboard with Docker
 
+## 홈 화면
+
 <p align="left">
   <img src="https://github.com/user-attachments/assets/2f2d7546-f2a3-4dee-a7b0-450d8ad8f8e0" width="500">
 </p>
