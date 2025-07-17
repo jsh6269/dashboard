@@ -1,5 +1,9 @@
 # Dashboard with Docker
 
+<p align="left">
+  <img src="https://github.com/user-attachments/assets/2f2d7546-f2a3-4dee-a7b0-450d8ad8f8e0" width="500">
+</p>
+
 이 프로젝트는 다음 기술 스택을 한 번에 체험할 수 있도록 구성되었습니다.
 
 - Python FastAPI
