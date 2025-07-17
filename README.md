@@ -44,6 +44,21 @@ dashboard/
 
 - Docker ≥ 20.10
 - Docker Compose ≥ v2
+- Ensure that port 3306 is not in use
+
+```bash
+# Windows
+netstat -ano | findstr :3306
+taskkill /PID {PID} /F
+
+# MAC
+lsof -i :3306
+kill -9 {PID}
+
+# Ubuntu
+sudo lsof -i :3306
+sudo kill -9 {PID}
+```
 
 ## 실행 방법
 
